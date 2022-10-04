@@ -52,7 +52,7 @@ struct context {
 };
 
 enum procstate { UNUSED, USED, ZOMBIE };                                // state of a dying process.
-enum threadstate { TUNUSED, TEMBRYO, TSLEEPING, TRUNNABLE, TRUNNING, TZOMBIE, TINVALID };
+enum threadstate { TUNUSED, TEMBRYO, TSLEEPING, TRUNNABLE, TRUNNING, TZOMBIE, TINVALID, TBLOCKED };
 enum mutexstate { MUNLOCKED, MLOCKED };
 
 struct thread {
