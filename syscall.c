@@ -100,6 +100,17 @@ extern int sys_write(void);
 extern int sys_uptime(void);
 extern int sys_procdump(void);
 
+
+extern int sys_kthread_create(void);
+extern int sys_kthread_id(void);
+extern int sys_kthread_exit(void);
+extern int sys_kthread_join(void);
+extern int sys_kthread_mutex_alloc(void);
+extern int sys_kthread_mutex_dealloc(void);
+extern int sys_kthread_mutex_lock(void);
+extern int sys_kthread_mutex_unlock(void);
+
+
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
 [SYS_exit]    sys_exit,

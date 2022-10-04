@@ -639,9 +639,6 @@ kthread_create(void* (*start_func)(), void* stack, int stack_size)
   return t->tid;
 }
 
-
-
-
 int 
 kthread_id()
 {
