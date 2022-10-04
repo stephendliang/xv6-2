@@ -121,12 +121,13 @@ int sys_kthread_id(void)
 
 int sys_kthread_exit(void)
 {
-  return kthread_exit();
+  kthread_exit();
+  return 0;
 }
 
 int sys_kthread_join(void)
 {
-  uint id;
+  int id;
 
   if(argint(0, &id) < 0){
     return -1;
@@ -142,7 +143,7 @@ int sys_kthread_mutex_alloc(void)
 
 int sys_kthread_mutex_dealloc(void)
 {
-  uint id;
+  int id;
 
   if(argint(0, &id) < 0){
     return -1;
@@ -153,7 +154,7 @@ int sys_kthread_mutex_dealloc(void)
 
 int sys_kthread_mutex_lock(void)
 {
-  uint id;
+  int id;
 
   if(argint(0, &id) < 0){
     return -1;
@@ -164,7 +165,7 @@ int sys_kthread_mutex_lock(void)
 
 int sys_kthread_mutex_unlock(void)
 {
-  uint id;
+  int id;
 
   if(argint(0, &id) < 0){
     return -1;
