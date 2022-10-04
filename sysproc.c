@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "user.h"
 
 int
 sys_fork(void)
@@ -102,11 +103,11 @@ sys_procdump(void)
 int sys_kthread_create(void)
 {
 
-  void* func;
-  void* stack;
+  char* func;
+  char* stack;
   int stack_size;
 
-  if(argstr(0, &func) < 0 || argstr(1, &stack) < 0 || argstr(2, &stack_size) < 0){
+  if(argstr(0, &func) < 0 || argstr(1, &stack) < 0 || argint(2, &stack_size) < 0){
     return -1;
   }
 
@@ -127,7 +128,7 @@ int sys_kthread_join(void)
 {
   uint id;
 
-  if(argstr(0, &id) < 0){
+  if(argint(0, &id) < 0){
     return -1;
   }
 
@@ -143,7 +144,7 @@ int sys_kthread_mutex_dealloc(void)
 {
   uint id;
 
-  if(argstr(0, &id) < 0){
+  if(argint(0, &id) < 0){
     return -1;
   }
 
@@ -154,7 +155,7 @@ int sys_kthread_mutex_lock(void)
 {
   uint id;
 
-  if(argstr(0, &id) < 0){
+  if(argint(0, &id) < 0){
     return -1;
   }
 
@@ -165,7 +166,7 @@ int sys_kthread_mutex_unlock(void)
 {
   uint id;
 
-  if(argstr(0, &id) < 0){
+  if(argint(0, &id) < 0){
     return -1;
   }
 
