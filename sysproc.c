@@ -110,7 +110,9 @@ int sys_kthread_create(void)
     return -1;
   }
 
-  return kthread_create(func, stack, stack_size);
+  void (*fun_ptr)() = func;
+
+  return kthread_create(fun_ptr, stack, stack_size);
 }
 
 int sys_kthread_id(void)
