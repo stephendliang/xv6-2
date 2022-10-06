@@ -53,7 +53,7 @@ struct context {
 
 enum procstate { UNUSED, USED, ZOMBIE };                                // state of a dying process.
 enum threadstate { TUNUSED, TEMBRYO, TSLEEPING, TRUNNABLE, TRUNNING, TZOMBIE, TINVALID, TBLOCKED };
-enum mutexstate { MUNLOCKED, MLOCKED };
+enum mutexstate { MUNUSED, MUNLOCKED, MLOCKED };
 
 struct thread {
   int tid;                     // Thread ID

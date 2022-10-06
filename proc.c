@@ -723,22 +723,14 @@ kthread_create(void* (*start_func)(), void* stack, int stack_size)
 
 
   *t->tf = *thread->tf;                  // Copy current thread’s trap frame
-  t->tf->esp = (int) stack + stack_size; // 
-  t->tf->eip = (int) start_func;         // 
-  t->tf->ebp = t->tf->esp;
+  t->tf->esp = (int) stack + stack_size; // Make stack pointer inside trap frame stack address + stack size
+  t->tf->ebp = (int) stack + stack_size; // Update base pointer inside trap frame as stack pointer
+  t->tf->eip = (int) start_func;         // Make instruction pointer inside trap frame start address
+
 
   t->state = TRUNNABLE;
+
   return t->tid;
-
-/*
-Find stack address of the thread using stack pointer given parameter
-Make stack pointer inside trap frame stack address + stack size
-Update base pointer inside trap frame as stack pointer
-Find address of the start function which is given in parameter
-Make instruction pointer inside trap frame start address
-return t_id
-
-*/
 }
 
 int 
@@ -754,13 +746,13 @@ void
 kthread_exit()
 {
   struct thread * t; // Create a thread pointer Create a found flag
-  int found = 0; // Loop through all threads to find another thread running
+  int found = 0, comb = 0; // Loop through all threads to find another thread running, also check valid
 
   acquire(&proc->lock);
 
   for (t = proc->threads; t < &proc->threads[NTHREAD]; ++t) {
     // If t is not Unused, not Zombied and not Invalid
-    int comb = VALID(t);
+    comb = VALID(t);
 
     if (t->tid != thread->tid && comb) { // If t is not current thread (because calling thread is current)
       found = 1; // Make flag true
@@ -814,7 +806,7 @@ int
 kthread_join(int thread_id)
 {
   struct thread * t;
-  if(thread_id == thread->tid)
+  if (thread_id == thread->tid)
     return -1;
 
   acquire(&ptable.lock);
@@ -824,15 +816,19 @@ kthread_join(int thread_id)
   while(t < &proc->threads[NTHREAD] && t->tid != thread_id)
     ++t;
 
+  if (t == &proc->threads[NTHREAD]) {
+    release(&ptable.lock);
+    return -1;
+  }
 
   // found the one
-  while(t->tid == thread_id && VALID(t))
+  while (t->tid == thread_id && VALID(t))
     sleep(t, &ptable.lock);
 
-  release(&ptable.lock);
-
-  if(t->state == TZOMBIE)
+  if (t->state == TZOMBIE)
     clearThread(t);
+
+  release(&ptable.lock);
 
   return 0;
 }
@@ -850,7 +846,8 @@ kthread_mutex_alloc()
 
   m = mtable.mtx_list;
 
-  while (m->state != MUNLOCKED && m < end) ++m;
+  while (m->state != MUNUSED && m < end)
+    ++m;
 
   if (m == end) {
     release(&mtable.lock);
@@ -880,7 +877,7 @@ kthread_mutex_dealloc(int mutex_id)
   }
 
   m->mid = 0;
-  m->state = MUNLOCKED;
+  m->state = MUNUSED;
 
   wakeup1(m);
 
@@ -888,25 +885,33 @@ kthread_mutex_dealloc(int mutex_id)
   return 0;
 }
 
+
 int 
 kthread_mutex_lock(int mutex_id)
 {
-  struct mutex *m;
-  
-  acquire(&mtable.lock);
-  for(m = mtable.mtx_list; m->mid != mutex_id && m < end; m++);
+  struct mutex *m; //   Create a mutex pointer m (using struct in proc.h)
+  int saved = 0;
 
-  if(m == end || m->state == MUNLOCKED)
-  {
+  acquire(&mtable.lock);
+
+  while (m->mid != mutex_id && m < end) //   Loop through all mutex table to find given mutex_id
+    ++m;
+
+  if (m == end) {
     release(&mtable.lock);
     return -1;
   }
 
+  saved = thread->state;
+  thread->state = TBLOCKED;
+
   while(m->state == MLOCKED)
     sleep(m, &mtable.lock);
 
-  if(m->state != MUNLOCKED) // may happen if another process thinks about change the state to UNUSED while waiting here.
-  {
+  thread->state = saved;
+
+
+  if (m->state != MUNLOCKED) {
     release(&mtable.lock);
     return -1; 
   }
@@ -916,26 +921,56 @@ kthread_mutex_lock(int mutex_id)
   release(&mtable.lock);
 
   return 0;
+
+/*
+
+    If m->mid == mutex_id break;
+    If (i is MAX_MUTEXES) -> given mutex_id not found return -1
+
+  while(m->state == M_LOCKED) sleep
+    If (m->state != M_UNLOCKED) -> failed Return -1
+*/
 }
 
 int 
 kthread_mutex_unlock(int mutex_id)
 {
+  // Create a mutex pointer m (using struct in proc.h)
   struct mutex *m;
+  int saved = 0;
   
   acquire(&mtable.lock);
-  for(m = mtable.mtx_list; m->mid != mutex_id && m < end; m++);
 
-  if(m == end || m->state != MLOCKED)
-  {
+  m = mtable.mtx_list;
+
+  // Loop through all mutex table to find given mutex_id
+  while (m->mid != mutex_id && m < end) {
+    if (m->mid == mutex_id) {
+      break;
+    }
+
+    ++m;
+  }
+
+  if (m == end || m->state != MLOCKED) {
     release(&mtable.lock);
     return -1;
   }
 
+  saved = thread->state;
+  thread->state = TBLOCKED;
+
   m->state = MUNLOCKED;
   wakeup1(m);
+
+  thread->state = saved;
 
   release(&mtable.lock);
   return 0;
 }
+
+
+
+
+
 
