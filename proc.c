@@ -8,6 +8,7 @@
 #include "spinlock.h"
 
 #define MAX_MUTEXES 64
+#define VALID(x) (x->state == TEMBRYO || x->state == TRUNNABLE || x->state == TRUNNING || x->state == TSLEEPING)
 
 extern char getSharedCounter(int index);
 
@@ -180,18 +181,23 @@ growproc(int n)
 {
   uint sz;
 
+  acquire(&ptable.lock);
+
   sz = proc->sz;
   if(n > 0){
     if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0){
+      release(&ptable.lock);
       return -1;
     }
   } else if(n < 0){
     if((sz = deallocuvm(proc->pgdir, sz, sz + n)) == 0){
+      release(&ptable.lock);
       return -1;
     }
   }
   proc->sz = sz;
   switchuvm(proc);
+  release(&ptable.lock);
   return 0;
 }
 
@@ -246,6 +252,85 @@ fork(void)
   return pid;
 }
 
+void kill_others()
+{
+  /*
+  Create thread pointer *t
+  For each thread t: Begin
+  If ( thread t is not current thread and not running and not unused)
+      Make it zombie
+  End*/
+
+  struct thread * t;
+
+  for(t = proc->threads; t < &proc->threads[NTHREAD]; t++) {
+    if(t->tid != thread->tid && t->state != TUNUSED && t->state != TRUNNING)
+      t->state = TZOMBIE;
+  }
+}
+
+void kill_all() {
+
+/*
+ Create thread pointer *t
+ For each thread t:
+ Begin
+  If ( thread t is not current thread and not running and not unused)
+      Make it zombie
+ End
+ Make current thread zombie
+ Kill process
+*/
+
+  struct thread * t;
+
+
+  for(t = proc->threads; t < &proc->threads[NTHREAD]; t++) {
+    if(t->tid != thread->tid && t->state != TUNUSED && t->state != TRUNNING)
+      t->state = TZOMBIE;
+  }
+
+  thread->state = TZOMBIE;
+
+}
+
+void kill_all()
+{
+  char found;
+  struct thread * t;
+
+  acquire(&proc->lock);
+  
+  if(thread->killed == 1) {
+    wakeup1(thread);
+    thread->state = INVALID; // thread must INVALID itself! - else two cpu's can run on the same thread
+    release(&proc->lock);
+    acquire(&ptable.lock);
+    sched();
+  } else {
+    for(t = proc->threads; t < &proc->threads[NTHREAD]; t++)
+      if(t->tid != thread->tid)
+        t->killed = 1;
+  }
+
+  release(&proc->lock);
+
+  for(;;)
+  {
+    found = 0;
+    acquire(&proc->lock);
+    for(t = proc->threads; t < &proc->threads[NTHREAD]; t++)
+      if(t->tid != thread->tid && t->state != INVALID && t->state != TUNUSED)
+        found = 1;
+
+    release(&proc->lock);
+    if(found) // some thread does not know the process is in dying state, lets wait for him to recover
+      yield();
+    else      // all of the other threads are dead
+      break;
+  }
+}
+
 
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
@@ -253,6 +338,8 @@ fork(void)
 void
 exit(void)
 {
+  kill_all();
+
   struct proc *p;
   int fd;
 
@@ -624,19 +711,37 @@ procdump(void)
 int 
 kthread_create(void* (*start_func)(), void* stack, int stack_size)
 {
-  struct thread * t;
-  t = allocthread(proc);
+  struct thread * t; // Create a thread pointer
+  t = allocthread(proc); // Allocate the thread using allocthread method
 
-  if(t == 0)
-    return -1;
+  if(t == 0) // Check if t is 0 —> allocated correctly?
+    return -1; // If not return -1
 
-  *t->tf = *thread->tf;
-  t->tf->eip = (int) start_func; // ?? should be on esp waiting for ret?
-  t->tf->esp = (int) stack + stack_size;
+
+  *t->tf = *thread->tf;                  // Copy current thread’s trap frame
+  t->tf->esp = (int) stack + stack_size; // 
+  t->tf->eip = (int) start_func;         // 
   t->tf->ebp = t->tf->esp;
 
   t->state = TRUNNABLE;
   return t->tid;
+
+
+Find stack address of the thread using stack pointer given parameter
+Make stack pointer inside trap frame stack address + stack size
+Update base pointer inside trap frame as stack pointer
+Find address of the start function which is given in parameter
+Make instruction pointer inside trap frame start address
+return t_id
+
+Else
+  Find stack address of the thread using stack pointer given parameter Make stack pointer inside trap frame stack address + stack size Update base pointer inside trap frame as stack pointer
+  Find address of the start function which is given in parameter
+  Make instruction pointer inside trap frame start address
+return t_id
+
+
+
 }
 
 int 
@@ -651,14 +756,19 @@ kthread_id()
 void 
 kthread_exit()
 {
-  struct thread * t;
-  int found = 0;
+  struct thread * t; // Create a thread pointer Create a found flag
+  int found = 0; // Loop through all threads to find another thread running
 
   acquire(&proc->lock);
+
   for (t = proc->threads; t < &proc->threads[NTHREAD]; ++t) {
-    int comb = (t->state == TEMBRYO || t->state == TRUNNABLE || t->state == TRUNNING || t->state == TSLEEPING);
-    if (t->tid != thread->tid && comb)
-      found = 1;
+    // If t is not Unused, not Zombied and not Invalid
+    int comb = VALID(t);
+
+    if (t->tid != thread->tid && comb) { // If t is not current thread (because calling thread is current)
+      found = 1; // Make flag true
+      break; // Break —> only one running t is enough
+    }
   }
 
   if (!found) {
@@ -666,13 +776,40 @@ kthread_exit()
     wakeup(t);
     exit();
   }
+
   release(&proc->lock);
 
   acquire(&ptable.lock);
   wakeup1(thread);
-  thread->state = TZOMBIE;
+  thread->state = TZOMBIE; // Make this thread zombie
+  sched(); // Call shed to schedule another thread
+
+
+
   
-  sched();
+    
+      
+      
+
+If (found)
+  Wakeup all waiting using wakeup1()
+Else —> not found
+  exit()
+  wakeup()
+
+  Create a thread pointer
+  Create a found flag
+  Loop through all threads to find another thread running
+  If t is not current thread (because calling thread is current)
+  If t is not Unused, not Zombied and not Invalid
+  Make flag true
+  Break —> only one running t is enough
+  If (found)
+  Wakeup all waiting using wakeup1() Else —> not found
+      exit()
+      wakeup()
+  Make this thread zombie
+  Call shed to schedule another thread
 }
 
 
@@ -683,11 +820,12 @@ kthread_join(int thread_id)
   if(thread_id == thread->tid)
     return -1;
 
-  for(t = proc->threads; t < &proc->threads[NTHREAD] && t->tid != thread_id; t++);
+  for(t = proc->threads; t < &proc->threads[NTHREAD] && t->tid != thread_id; ++t);
 
   acquire(&ptable.lock);
+
   // found the one
-  while(t->tid == thread_id && (t->state == TEMBRYO || t->state == TRUNNABLE || t->state == TRUNNING || t->state == TSLEEPING))
+  while(t->tid == thread_id && VALID(x))
     sleep(t, &ptable.lock);
 
   release(&ptable.lock);
@@ -698,6 +836,10 @@ kthread_join(int thread_id)
   return 0;
 }
 
+
+
+
+
 int 
 kthread_mutex_alloc()
 {
@@ -707,8 +849,7 @@ kthread_mutex_alloc()
 
   m = mtable.mtx_list;
 
-  while (m->state != MUNLOCKED && m < end)
-    ++m;
+  while (m->state != MUNLOCKED && m < end) ++m;
 
   if (m == end) {
     release(&mtable.lock);

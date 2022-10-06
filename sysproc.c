@@ -101,7 +101,6 @@ sys_procdump(void)
 
 int sys_kthread_create(void)
 {
-
   char* func;
   char* stack;
   int stack_size;
@@ -110,7 +109,7 @@ int sys_kthread_create(void)
     return -1;
   }
 
-  void (*fun_ptr)() = func;
+  void (*fun_ptr)() = (void(*))func;
 
   return kthread_create(fun_ptr, stack, stack_size);
 }
