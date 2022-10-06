@@ -262,11 +262,14 @@ void kill_others()
   End*/
 
   struct thread * t;
+  acquire(&proc->lock);
 
   for(t = proc->threads; t < &proc->threads[NTHREAD]; t++) {
     if(t->tid != thread->tid && t->state != TUNUSED && t->state != TRUNNING)
       t->state = TZOMBIE;
   }
+  release(&proc->lock);
+
 }
 
 void kill_all() {
