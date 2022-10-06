@@ -297,6 +297,7 @@ void kill_all() {
 
 }
 
+/*
 void kill_all()
 {
   char found;
@@ -323,7 +324,7 @@ void kill_all()
     found = 0;
     acquire(&proc->lock);
     for(t = proc->threads; t < &proc->threads[NTHREAD]; t++)
-      if(t->tid != thread->tid && t->state != INVALID && t->state != TUNUSED)
+      if(t->tid != thread->tid && t->state != TINVALID && t->state != TUNUSED)
         found = 1;
 
     release(&proc->lock);
@@ -333,7 +334,7 @@ void kill_all()
       break;
   }
 }
-
+*/
 
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
