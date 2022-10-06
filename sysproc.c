@@ -109,7 +109,7 @@ int sys_kthread_create(void)
     return -1;
   }
 
-  void (*fun_ptr)() = (void(*))func;
+  void* (*fun_ptr)() = (void(*))func;
 
   return kthread_create(fun_ptr, stack, stack_size);
 }
