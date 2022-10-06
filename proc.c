@@ -726,7 +726,7 @@ kthread_create(void* (*start_func)(), void* stack, int stack_size)
   t->state = TRUNNABLE;
   return t->tid;
 
-
+/*
 Find stack address of the thread using stack pointer given parameter
 Make stack pointer inside trap frame stack address + stack size
 Update base pointer inside trap frame as stack pointer
@@ -734,14 +734,7 @@ Find address of the start function which is given in parameter
 Make instruction pointer inside trap frame start address
 return t_id
 
-Else
-  Find stack address of the thread using stack pointer given parameter Make stack pointer inside trap frame stack address + stack size Update base pointer inside trap frame as stack pointer
-  Find address of the start function which is given in parameter
-  Make instruction pointer inside trap frame start address
-return t_id
-
-
-
+*/
 }
 
 int 
@@ -790,7 +783,7 @@ kthread_exit()
     
       
       
-
+/*
 If (found)
   Wakeup all waiting using wakeup1()
 Else —> not found
@@ -810,8 +803,8 @@ Else —> not found
       wakeup()
   Make this thread zombie
   Call shed to schedule another thread
+*/
 }
-
 
 int 
 kthread_join(int thread_id)
@@ -820,9 +813,13 @@ kthread_join(int thread_id)
   if(thread_id == thread->tid)
     return -1;
 
-  for(t = proc->threads; t < &proc->threads[NTHREAD] && t->tid != thread_id; ++t);
-
   acquire(&ptable.lock);
+
+  t = proc->threads;
+
+  while(t < &proc->threads[NTHREAD] && t->tid != thread_id)
+    ++t;
+
 
   // found the one
   while(t->tid == thread_id && VALID(x))
