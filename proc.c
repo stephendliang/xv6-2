@@ -284,6 +284,7 @@ void kill_all() {
 
   struct thread * t;
 
+  acquire(&proc->lock);
 
   for(t = proc->threads; t < &proc->threads[NTHREAD]; t++) {
     if(t->tid != thread->tid && t->state != TUNUSED && t->state != TRUNNING)
@@ -291,6 +292,8 @@ void kill_all() {
   }
 
   thread->state = TZOMBIE;
+
+  release(&proc->lock);
 
 }
 
@@ -303,7 +306,7 @@ void kill_all()
   
   if(thread->killed == 1) {
     wakeup1(thread);
-    thread->state = INVALID; // thread must INVALID itself! - else two cpu's can run on the same thread
+    thread->state = TINVALID; // thread must INVALID itself! - else two cpu's can run on the same thread
     release(&proc->lock);
     acquire(&ptable.lock);
     sched();
@@ -822,7 +825,7 @@ kthread_join(int thread_id)
 
 
   // found the one
-  while(t->tid == thread_id && VALID(x))
+  while(t->tid == thread_id && VALID(t))
     sleep(t, &ptable.lock);
 
   release(&ptable.lock);
