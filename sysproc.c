@@ -5,6 +5,7 @@
 #include "param.h"
 #include "memlayout.h"
 #include "mmu.h"
+#include "condvar.h"
 #include "proc.h"
 
 int
@@ -39,7 +40,7 @@ sys_kill(void)
 int
 sys_getpid(void)
 {
-  return proc->pid;
+  return myproc()->pid;
 }
 
 int
@@ -50,7 +51,7 @@ sys_sbrk(void)
 
   if(argint(0, &n) < 0)
     return -1;
-  addr = proc->sz;
+  addr = myproc()->sz;
   if(growproc(n) < 0)
     return -1;
   return addr;
@@ -67,7 +68,7 @@ sys_sleep(void)
   acquire(&tickslock);
   ticks0 = ticks;
   while(ticks - ticks0 < n){
-    if(proc->killed){
+    if(myproc()->killed){
       release(&tickslock);
       return -1;
     }
@@ -90,87 +91,15 @@ sys_uptime(void)
   return xticks;
 }
 
-int 
-sys_procdump(void)
-{
-  procdump();
+int sys_cv_signal(void) {
+  int i;
+  struct condvar *cv; argint(0, &i);
+  cv = (struct condvar *) i; wakeup(cv);
   return 0;
 }
-
-
-
-int sys_kthread_create(void)
-{
-  char* func;
-  char* stack;
-  int stack_size;
-
-  if(argstr(0, &func) < 0 || argstr(1, &stack) < 0 || argint(2, &stack_size) < 0){
-    return -1;
-  }
-
-  void* (*fun_ptr)() = (void(*))func;
-
-  return kthread_create(fun_ptr, stack, stack_size);
+int sys_cv_wait(void) {
+  int i;
+  struct condvar *cv; argint(0, &i);
+  cv = (struct condvar *) i;
+  sleep1(cv, &(cv->lk)); return 0;
 }
-
-int sys_kthread_id(void)
-{
-  return kthread_id();
-}
-
-int sys_kthread_exit(void)
-{
-  kthread_exit();
-  return 0;
-}
-
-int sys_kthread_join(void)
-{
-  int id;
-
-  if(argint(0, &id) < 0){
-    return -1;
-  }
-
-  return kthread_join(id);
-}
-
-int sys_kthread_mutex_alloc(void)
-{
-  return kthread_mutex_alloc();
-}
-
-int sys_kthread_mutex_dealloc(void)
-{
-  int id;
-
-  if(argint(0, &id) < 0){
-    return -1;
-  }
-
-  return kthread_mutex_dealloc(id);
-}
-
-int sys_kthread_mutex_lock(void)
-{
-  int id;
-
-  if(argint(0, &id) < 0){
-    return -1;
-  }
-
-  return kthread_mutex_lock(id);
-}
-
-int sys_kthread_mutex_unlock(void)
-{
-  int id;
-
-  if(argint(0, &id) < 0){
-    return -1;
-  }
-
-  return kthread_mutex_unlock(id);
-}
-

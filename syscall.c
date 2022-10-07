@@ -17,7 +17,9 @@
 int
 fetchint(uint addr, int *ip)
 {
-  if(addr >= proc->sz || addr+4 > proc->sz)
+  struct proc *curproc = myproc();
+
+  if(addr >= curproc->sz || addr+4 > curproc->sz)
     return -1;
   *ip = *(int*)(addr);
   return 0;
@@ -30,14 +32,16 @@ int
 fetchstr(uint addr, char **pp)
 {
   char *s, *ep;
+  struct proc *curproc = myproc();
 
-  if(addr >= proc->sz)
+  if(addr >= curproc->sz)
     return -1;
   *pp = (char*)addr;
-  ep = (char*)proc->sz;
-  for(s = *pp; s < ep; s++)
+  ep = (char*)curproc->sz;
+  for(s = *pp; s < ep; s++){
     if(*s == 0)
       return s - *pp;
+  }
   return -1;
 }
 
@@ -45,20 +49,21 @@ fetchstr(uint addr, char **pp)
 int
 argint(int n, int *ip)
 {
-  return fetchint(thread->tf->esp + 4 + 4*n, ip);
+  return fetchint((myproc()->tf->esp) + 4 + 4*n, ip);
 }
 
 // Fetch the nth word-sized system call argument as a pointer
-// to a block of memory of size n bytes.  Check that the pointer
+// to a block of memory of size bytes.  Check that the pointer
 // lies within the process address space.
 int
 argptr(int n, char **pp, int size)
 {
   int i;
-
+  struct proc *curproc = myproc();
+ 
   if(argint(n, &i) < 0)
     return -1;
-  if((uint)i >= proc->sz || (uint)i+size > proc->sz)
+  if(size < 0 || (uint)i >= curproc->sz || (uint)i+size > curproc->sz)
     return -1;
   *pp = (char*)i;
   return 0;
@@ -98,18 +103,8 @@ extern int sys_unlink(void);
 extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
-extern int sys_procdump(void);
-
-
-extern int sys_kthread_create(void);
-extern int sys_kthread_id(void);
-extern int sys_kthread_exit(void);
-extern int sys_kthread_join(void);
-extern int sys_kthread_mutex_alloc(void);
-extern int sys_kthread_mutex_dealloc(void);
-extern int sys_kthread_mutex_lock(void);
-extern int sys_kthread_mutex_unlock(void);
-
+extern int sys_cv_signal(void);
+extern int sys_cv_wait(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -134,30 +129,20 @@ static int (*syscalls[])(void) = {
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
 
-[SYS_kthread_create]   sys_kthread_create,
-[SYS_kthread_id]   sys_kthread_id,
-[SYS_kthread_exit]   sys_kthread_exit,
-[SYS_kthread_join]   sys_kthread_join,
-[SYS_kthread_mutex_alloc]   sys_kthread_mutex_alloc,
-[SYS_kthread_mutex_dealloc]   sys_kthread_mutex_dealloc,
-[SYS_kthread_mutex_lock]   sys_kthread_mutex_lock,
-[SYS_kthread_mutex_unlock]   sys_kthread_mutex_unlock,
-
-[SYS_procdump] sys_procdump,
 };
-
 
 void
 syscall(void)
 {
   int num;
+  struct proc *curproc = myproc();
 
-  num = thread->tf->eax;
+  num = curproc->tf->eax;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
-    thread->tf->eax = syscalls[num]();
+    curproc->tf->eax = syscalls[num]();
   } else {
     cprintf("%d %s: unknown sys call %d\n",
-            thread->tid, proc->name, num);
-    thread->tf->eax = -1;
+            curproc->pid, curproc->name, num);
+    curproc->tf->eax = -1;
   }
 }

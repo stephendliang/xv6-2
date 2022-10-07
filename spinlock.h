@@ -1,6 +1,3 @@
-#ifndef XV6_PUBLIC_SPINLOCK_H
-#define XV6_PUBLIC_SPINLOCK_H
-
 // Mutual exclusion lock.
 struct spinlock {
   uint locked;       // Is the lock held?
@@ -12,4 +9,3 @@ struct spinlock {
                      // that locked the lock.
 };
 
-#endif
