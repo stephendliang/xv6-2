@@ -1,5 +1,6 @@
 struct stat;
 struct rtcdate;
+struct spinlock;
 struct condvar;
 
 // system calls
