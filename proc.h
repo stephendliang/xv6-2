@@ -56,6 +56,3 @@ struct proc {
 //   original data and bss
 //   fixed-size stack
 //   expandable heap
-
-void
-sleep1(void *chan, struct spinlock *lk);
