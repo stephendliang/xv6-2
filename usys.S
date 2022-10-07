@@ -30,4 +30,4 @@ SYSCALL(sbrk)
 SYSCALL(sleep)
 SYSCALL(uptime)
 SYSCALL(cv_signal)
-SYSCALL(cv_wait
+SYSCALL(cv_wait)
