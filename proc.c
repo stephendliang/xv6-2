@@ -126,7 +126,7 @@ found:
     }
   }
 
-finshift:
+//finshift:
 
   p->state = EMBRYO;
   p->pid = nextpid++;
