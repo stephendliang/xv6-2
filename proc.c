@@ -85,7 +85,7 @@ static struct proc*
 allocproc(void)
 {
   struct proc *p;
-  char *sp;
+  char *sp; int i;
 
   acquire(&ptable.lock);
 
@@ -103,7 +103,7 @@ found:
     for (i=0;(i<c0); i++) {
       if (p == q0[i]) {
         copyover(q0, i, c0);
-        q0[c0 - 1] = NULL;
+        q0[c0 - 1] = 0;
         --c0;
         break;
       }
@@ -111,7 +111,7 @@ found:
     for (i=0;(i<c1); i++) {
       if (p == q1[i]) {
         copyover(q1, i, c1);
-        q1[c1 - 1] = NULL;
+        q1[c1 - 1] = 0;
         --c1;
         break;
       }
@@ -119,7 +119,7 @@ found:
     for (i=0;(i<c2); i++) {
       if (p == q2[i]) {
         copyover(q2, i, c2);
-        q2[c2 - 1] = NULL;
+        q2[c2 - 1] = 0;
         --c2;
         break;
       }
@@ -138,18 +138,31 @@ finshift:
     Priority, total_ticks etc —> whatever is necessary
     p = q0[c0]—> Add p into first priority queue
   */
-  pstat_var.inuse[p->pid] = 1;
-  p->priority = 0;
-  p->clicks = 0;
+
+  p->times[0] = 0; p->times[1] = 0; p->times[2] = 0; // number of times each process has been scheduled
+                // in each queue
+
+  p->ticks[0] = 0; p->ticks[1] = 0; p->ticks[2] = 0; // number of ticks each process used the last time
+                // scheduled in each priority queue
+                // cannot be greater than the time slice for each queue
+
+  p->wait_time = 0; // number of ticks each RUNNABLE process waited in the lowest
+                  // priority queue
+
+
+
+  p->num_ticks = 0; //number of timer ticks the process has run for
+  p->total_ticks = 0; //total number of timer ticks the process has run for
+  p->num_stats_used = 0; // count to the end of the array
+
+
+  p->sched_stats[ticks].start_tick = 0;
+  p->sched_stats[ticks].duration = 0;
+  p->sched_stats[ticks].priority = 0;
+
+
   q0[c0] = p;
   ++c0;
-
-  p->pstat_var.priority[p->pid] = p->priority;
-  p->pstat_var.ticks[p->pid][0] = 0;
-  p->pstat_var.ticks[p->pid][1] = 0;
-  p->pstat_var.ticks[p->pid][2] = 0;
-  p->pstat_var.ticks[p->pid][3] = 0;
-  p->pstat_var.pid[p->pid] = p->pid;
 
   // should i put this here
   release(&ptable.lock);
