@@ -20,7 +20,7 @@ void compute_intense()
 void io_intense()
 {
   for (int I = 0; I < 200000; ++I)
-    printf("abcdefghijklmnop %i,\n", I);
+    cprintf("abcdefghijklmnop %i,\n", I);
 }
 
 int main() {
@@ -30,15 +30,13 @@ int main() {
       //Fork multiple times — Like 10 times
       //Do CPU or I/O intensive job
       compute_intense();
-      getpinfo()
+      getpinfo(getpid());
     } else {
       //Do CPU or I/O intensive job in each task
       io_intense();
-      getpinfo();
+      getpinfo(getpid());
     }
   }
-
-
 
     exit();
 }
