@@ -20,7 +20,7 @@ void compute_intense()
 void io_intense()
 {
   for (int I = 0; I < 200000; ++I)
-    cprintf("abcdefghijklmnop %i,\n", I);
+    printf(1,"abcdefghijklmnop %i,\n", I);
 }
 
 int main() {
