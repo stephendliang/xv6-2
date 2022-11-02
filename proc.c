@@ -782,16 +782,16 @@ getpinfo(int pid)
       continue;
 
     if (p->pid == pid) {
-      cprintf("name = %s, pid = %d\n", proc->name, proc->pid);
-      cprintf("wait_time = %d\n", proc->wait_time);
-      cprintf("ticks = {%d, %d, %d}\n", proc->ticks[0], proc->ticks[1], proc->ticks[2]);
-      cprintf("times = {%d, %d, %d}\n", proc->times[0], proc->times[1], proc->times[2]);
+      cprintf("name = %s, pid = %d\n", p->name, p->pid);
+      cprintf("wait_time = %d\n", p->wait_time);
+      cprintf("ticks = {%d, %d, %d}\n", p->ticks[0], p->ticks[1], p->ticks[2]);
+      cprintf("times = {%d, %d, %d}\n", p->times[0], p->times[1], p->times[2]);
 
       // for each stat
       //For each stat until num_of_stats
       for (int i = 0; i < NSCHEDSTATS; ++i)
         cprintf("start=%d, duration=%d, priority=%d\n",
-        sched_stat[i].start_tick, sched_stats[i].duration, sched_stats[i].priority);// from each valid item in sched_stats
+        p->sched_stats[i].start_tick, p->sched_stats[i].duration, p->sched_stats[i].priority);// from each valid item in sched_stats
     }
   }
   
