@@ -1,31 +1,33 @@
-/*Fork()
- If (pid > 0) {
-   Do I/O instensive job
-   wait();
-   getpinfo(getpid());
- }
- Else {
-  Do CPU intensive job
-  exit()
- }
-*/
-
 #include "types.h"
-#include "date.h"
+#include "stat.h"
 #include "user.h"
+#include "condvar.h"
+#include "fcntl.h"
 
 int main() {
-    int pid = fork();
-    if (pid > 0) {
-        nice(0);
-        sleep(1);
-        getpri();
-      wait();
-    } else {
-      nice(2);
-        sleep(1);
-        getpri();
-    }
+	int pid = fork();
+	
+	if (pid > 0) {
+ 	    // Do I/O instensive job
+	 	for (int I = 0; I < 100; ++I)
+	 		printf("abcde %i,\n", I);
+		wait();
+	    getpinfo(getpid());
+	} else {
+	 	// compute intensive
+	 	int j = 0;
+		for (int I = 0; I < 200000; ++I)
+			j += (I % 69) * 7 / 42;
+		j %= ((1 << 16) + 1);
+		for (int I = 0; I < 200000; ++I)
+			j += (I % 9381) * 3 / 17;
+		j %= ((1 << 16) + 1);
+		for (int I = 0; I < 200000; ++I)
+			j += (I % 197) * 7 / 29;
+		j %= ((1 << 16) + 1);
+	 	
+	 	printf("%i,\n", j);
+	}
+
     exit();
 }
-

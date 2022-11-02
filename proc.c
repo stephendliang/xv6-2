@@ -6,19 +6,16 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
-#include "pstat.h"
+
+#define copyover(arr, i, lim) while (i < lim) {arr[i] = arr[i + 1];++i;}
 
 struct proc* q0[NPROC];
 struct proc* q1[NPROC];
 struct proc* q2[NPROC];
 
-
-int c0=-1;
-int c1=-1;
-int c2=-1;
-
-int clkPerPrio[4] ={1,2,4};
-struct pstat pstat_var;
+int c0=0;
+int c1=0;
+int c2=0;
 
 struct {
   struct spinlock lock;
@@ -30,6 +27,7 @@ static struct proc *initproc;
 int nextpid = 1;
 extern void forkret(void);
 extern void trapret(void);
+extern uint ticks;
 
 static void wakeup1(void *chan);
 
@@ -83,14 +81,6 @@ myproc(void) {
 // If found, change state to EMBRYO and initialize
 // state required to run in the kernel.
 // Otherwise return 0.
-/*
-static struct proc *
-allocproc (void)
-{
-}
-
-*/
-
 static struct proc*
 allocproc(void)
 {
@@ -109,62 +99,60 @@ allocproc(void)
 found:
 
   //After found -> Remove from queue:
-  if (p->pid > 0) {
+  if (p->pid >= 0) {
     for (i=0;(i<c0); i++) {
       if (p == q0[i]) {
-        //Delete q0[i]
-        //Shift all left
-        memmove(&q0[i], &q0[i+1], c0-i-1);
-        q0[NPROC - 1] = NULL;
-        goto finshift;
+        copyover(q0, i, c0);
+        q0[c0 - 1] = NULL;
+        --c0;
+        break;
       }
     }
     for (i=0;(i<c1); i++) {
       if (p == q1[i]) {
-        memmove(&q1[i], &q1[i+1], c1-i-1);
-        q1[NPROC - 1] = NULL;
-        goto finshift;
+        copyover(q1, i, c1);
+        q1[c1 - 1] = NULL;
+        --c1;
+        break;
       }
     }
     for (i=0;(i<c2); i++) {
       if (p == q2[i]) {
-        memmove(&q2[i], &q2[i+1], c2-i-1);
-        q2[NPROC - 1] = NULL;
-        goto finshift;
+        copyover(q2, i, c2);
+        q2[c2 - 1] = NULL;
+        --c2;
+        break;
       }
     }
   }
 
+finshift:
+
   p->state = EMBRYO;
   p->pid = nextpid++;
 
+
 /*
-  finshift:
-  {
     //After searching all and shifting:
     // Initiate proc properties
     Priority, total_ticks etc —> whatever is necessary
-    c0++;
     p = q0[c0]—> Add p into first priority queue
-  }
   */
   pstat_var.inuse[p->pid] = 1;
   p->priority = 0;
   p->clicks = 0;
-  c0++;
   q0[c0] = p;
+  ++c0;
 
-  pstat_var.priority[p->pid] = p->priority;
-  pstat_var.ticks[p->pid][0] = 0;
-  pstat_var.ticks[p->pid][1] = 0;
-  pstat_var.ticks[p->pid][2] = 0;
-  pstat_var.ticks[p->pid][3] = 0;
-  pstat_var.pid[p->pid] = p->pid;
+  p->pstat_var.priority[p->pid] = p->priority;
+  p->pstat_var.ticks[p->pid][0] = 0;
+  p->pstat_var.ticks[p->pid][1] = 0;
+  p->pstat_var.ticks[p->pid][2] = 0;
+  p->pstat_var.ticks[p->pid][3] = 0;
+  p->pstat_var.pid[p->pid] = p->pid;
 
+  // should i put this here
   release(&ptable.lock);
-
-
-
 
   // Allocate kernel stack.
   if((p->kstack = kalloc()) == 0){
@@ -188,7 +176,6 @@ found:
   p->context->eip = (uint)forkret;
 
   return p;
-
 }
 
 //PAGEBREAK: 32
@@ -199,7 +186,9 @@ userinit(void)
   struct proc *p;
   extern char _binary_initcode_start[], _binary_initcode_size[];
 
-//Reset schedule stats because we just start the first process here
+
+  // reset stats
+
 
   p = allocproc();
   
@@ -389,6 +378,34 @@ wait(void)
   }
 }
 
+void boost()
+{
+  proc* p;
+
+  if (c2 > 0) {
+    for (int i = 0; i < c2; ++i) {
+      if (q2[i].wait_time >= 50) {
+        --c2;
+        int j = i;
+        p = q2[c2];
+        p->priority = 0;
+        q0[c0] = p;
+        copyover(q2, j, c2);
+        ++c0;
+      }
+    }
+  }
+
+  /**
+   * p = p_to_boost
+Change priority of p
+c0++;
+q0[c0] = p
+Delete from q2 and shift left
+*/
+
+}
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -410,220 +427,158 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+
+    // everything same above this line
+    if (c0!=-1){
+      for (int i=0;i <= c0;++i) {
+        if (q0[i]->state != RUNNABLE) continue;
+
+        p = q0[i];
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+        p->num_ticks++;
+
+        int start = ticks;
+        swtch(&cpu->scheduler, proc->context);
+        switchkvm();
+        int duration = ticks - start;
+        p->num_stats_used++;
+        p->times[0]++;
+        p->ticks[0] = duration;
+        p->total_ticks += duration;
+
+        p->sched_stats[ticks].start_tick = start; //the number of ticks when this process is scheduled
+        p->sched_stats[ticks].duration = duration; //number of ticks the process is running before it gives up the CPU
+        p->sched_stats[ticks].priority = 0; //the priority of the process when it's scheduled
+
+
+        if (p->ticks >= 1) {
+          p->ticks = 0;
+          //copy proc to lower priority queue;
+          q1[c1] = p;
+          q0[i] = 0;
+          int j = i;
+          copyover(q0, j, c0)
+          ++c1;
+          --c0;
+        }
+
+        boost();
+        c->proc = 0;
+      }
+    }
+
+    if (c1!=-1) {
+      for (int i=0;i <= c1;++i) {
+        if (q1[i]->state != RUNNABLE) continue;
+
+        p = q1[i];
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+        p->num_ticks++;
+
+        int start = ticks;
+        swtch(&cpu->scheduler, proc->context);
+        switchkvm();
+        int duration = ticks - start;
+        p->num_stats_used++;
+        p->times[1]++;
+        p->ticks[1] = duration;
+        p->total_ticks += duration;
+
+        p->sched_stats[ticks].start_tick = start; //the number of ticks when this process is scheduled
+        p->sched_stats[ticks].duration = duration; //number of ticks the process is running before it gives up the CPU
+        p->sched_stats[ticks].priority = 1; //the priority of the process when it's scheduled
+
+
+        if (p->ticks >= 2) {
+          p->ticks = 0;
+          //copy proc to lower priority queue;
+          q2[c2] = p;
+          q1[i] = 0;
+          int j = i;
+          copyover(q1, j, c1)
+          ++c2;
+          --c1;
+        }
+
+        boost();
+        c->proc = 0;
+      }
+    }
+
+
+    if (c2!=-1) {
+      for (int i=0;i <= c1;++i) {
+        if (q1[i]->state != RUNNABLE) continue;
+
+        p = q1[i];
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+        p->num_ticks++;
+
+        int start = ticks;
+        swtch(&cpu->scheduler, proc->context);
+        switchkvm();
+        int duration = ticks - start;
+        p->num_stats_used++;
+        p->times[1]++;
+        p->ticks[1] = duration;
+        p->total_ticks += duration;
+
+        p->sched_stats[tick].start_tick = start; //the number of ticks when this process is scheduled
+        p->sched_stats[tick].duration = duration; //number of ticks the process is running before it gives up the CPU
+        p->sched_stats[tick].priority = 2; //the priority of the process when it's scheduled
+
+
+        boost();
+        if (p->ticks >= 8) {
+          p->ticks = 0;
+          //move process to end of its own queue Shift left
+          int j = i;
+          copyover(q1, i, lim)
+
+          q2[c2] = p;
+        }
+        c->proc = 0;
+      }
+    }
+
+
+
+/*
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
 
-      if (q found) {
+      // now we want to see if it is in a queue
 
-      }
+
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
-      p = q0[i];
-
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
 
-
-      WRITE STATS ->start_tick and priority
-
       swtch(&(c->scheduler), p->context);
       switchkvm();
 
-
-
-
-
-      duration = ticks - start;
-      p->num_stats_used++;
-      p->times[0]++;
-      p->ticks = duration; 
-      total_ticks++;
-
-
-
-
       // Process is done running for now.
       // It should have changed its p->state before coming back.
-      if (p->ticks >= 1) {
-        p->ticks = 0;
-        copy proc;
-        increase c1;
-        q1[c1] = p;
-        q0[i] = 0;
-        shift all left from i;
-      }
-
-      boost();
-
       c->proc = 0;
-    }
+    }*/
+
+
+
     release(&ptable.lock);
 
   }
 }
-
-void scheduler(void)
-{
-  struct proc *p;
-  struct cpu *c = mycpu();
-  int i, j;
-  c->proc = 0;
-
-  for(;;){
-    // Enable interrupts on this processor.
-    sti();
-
-    // Loop over process table looking for process to run.
-    acquire(&ptable.lock);
-
-    if (c0 != -1) {
-      for (i = 0; i <= c0; i++) {
-        if(q0[i]->state != RUNNABLE)
-          continue;
-      }
-
-      p=q0[i];
-      proc = q0[i];
-      p->clicks++;
-      switchuvm(p);
-      p->state = RUNNING;
-
-
-      // WRITE STATS
-
-
-      swtch(&cpu->scheduler, proc->context);
-      switchkvm();
-
-      pstat_var.ticks[p->pid][0] = p->clicks;
-      
-
-      if (p->clicks == clkPerPrio[0]) {
-        /*copy proc to lower priority queue*/
-        c1++;
-        proc->priority = proc->priority+1;
-        pstat_var.priority[proc->pid] = proc->priority;
-        q1[c1] = proc;
-
-        /*delete proc from q0*/
-        q0[i]=NULL;
-        for (j=i; j <= c0 - 1; ++j)
-          q0[j] = q0[j+1];
-        
-        q0[c0] = NULL;
-        proc->clicks = 0;
-        c0--;
-      }
-
-
-
-      p->num_stats_used++;
-      p->times[0]++;
-      p->ticks = duration; 
-      total_ticks++;
-
-      proc = 0;
-    }
-
-    if(c1!=-1){
-      for(i=0;i<=c1;i++){
-        if(q1[i]->state != RUNNABLE)
-          continue;
-
-        p=q1[i];
-        proc = q1[i];
-        proc->clicks++;
-        switchuvm(p);
-        p->state = RUNNING;
-        swtch(&cpu->scheduler, proc->context);
-        switchkvm();
-        pstat_var.ticks[p->pid][1]=p->clicks;;
-        if(p->clicks ==clkPerPrio[1]){
-
-          /*copy proc to lower priority queue*/
-          c2++;
-          proc->priority=proc->priority+1;
-          pstat_var.priority[proc->pid] = proc->priority;
-          q2[c2] = proc;
-
-          /*delete proc from q0*/
-          q1[i]=NULL;
-          for(j=i;j<=c1-1;j++)
-            q1[j] = q1[j+1];
-          q1[c1] = NULL;
-          proc->clicks = 0;
-          c1--;
-        }
-        proc = 0;
-      }
-    }
-    if(c2!=-1){
-        for(i=0;i<=c2;i++){
-                  if(q2[i]->state != RUNNABLE)
-                    continue;
-
-                p=q2[i];
-                proc = q2[i];
-                proc->clicks++;
-                switchuvm(p);
-                p->state = RUNNING;
-                swtch(&cpu->scheduler, proc->context);
-                switchkvm();
-                pstat_var.ticks[p->pid][2]=p->clicks;;
-                if(p->clicks ==clkPerPrio[2]){
-                  /*copy proc to lower priority queue*/
-                  c3++;
-                  proc->priority=proc->priority+1;
-                  pstat_var.priority[p->pid] = p->priority;
-                  q3[c3] = proc;
-
-                  /*delete proc from q0*/
-                  q2[i]=NULL;
-                  for(j=i;j<=c2-1;j++)
-                    q2[j] = q2[j+1];
-                  q2[c2] =NULL;
-                  proc->clicks = 0;
-                  c2--;
-                }
-                proc = 0;
-              }
-    }
-    if(c3!=-1){
-      for(i=0;i<=c3;i++){
-          if(q3[i]->state != RUNNABLE)
-            continue;
-
-        p=q3[i];
-        proc = q3[i];
-        proc->clicks++;
-        switchuvm(p);
-        p->state = RUNNING;
-        swtch(&cpu->scheduler, proc->context);
-        switchkvm();
-        pstat_var.priority[p->pid] = p->priority;
-        pstat_var.ticks[p->pid][3]=p->clicks;;
-
-        /*move process to end of its own queue */
-        q3[i]=NULL;
-        for(j=i;j<=c3-1;j++)
-          q3[j] = q3[j+1];
-        q3[c3] = proc;
-
-        proc = 0;
-      }
-    }
-    release(&ptable.lock);
-  }
-}
-
-
-
-
-
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores
@@ -802,3 +757,32 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+int
+getpinfo(int pid)
+{
+  struct proc *p;
+  acquire(&ptable.lock);
+
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if(p->state == UNUSED)
+      continue;
+
+    if (p->pid == pid) {
+      printf("name = %s, pid = %d\n", proc->name, proc->pid);
+      printf("wait_time = %d\n", proc->wait_time);
+      printf("ticks = {%d, %d, %d}\n", proc->ticks[0], proc->ticks[1], proc->ticks[2]);
+      printf("times = {%d, %d, %d}\n", proc->times[0], proc->times[1], proc->times[2]);
+
+      // for each stat
+      //For each stat until num_of_stats
+      for (int i = 0; i < NSCHEDSTATS; ++i)
+        printf("start=%d, duration=%d, priority=%d\n",
+        sched_stat[i].start_tick, sched_stats[i].duration, sched_stats[i].priority);// from each valid item in sched_stats
+    }
+  }
+  
+  release(&ptable.lock);
+  return 0;
+}
+

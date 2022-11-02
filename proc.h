@@ -1,3 +1,5 @@
+#include "pstat.h"
+
 // Per-CPU state
 struct cpu {
   uchar apicid;                // Local APIC ID
@@ -10,19 +12,19 @@ struct cpu {
   struct proc *proc;           // The process running on this cpu or null
 };
 
-extern struct cpu cpus[NCPU];
-extern int ncpu;
-
+extern struct proc* q0[NPROC];
+extern struct proc* q1[NPROC];
+extern struct proc* q2[NPROC];
 
 extern int c0;
 extern int c1;
 extern int c2;
 
-extern struct proc* q0[NPROC];
-extern struct proc* q1[NPROC];
-extern struct proc* q2[NPROC];
+extern 
+int getpinfo(int pid);
 
-
+extern struct cpu cpus[NCPU];
+extern int ncpu;
 
 //PAGEBREAK: 17
 // Saved registers for kernel context switches.
@@ -61,20 +63,19 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
+  int times[3]; // number of times each process has been scheduled
+                // in each queue
 
- int times[3]
- int ticks[3]
- uint wait_time;
-// number of times each process was scheduled at each of 3
-// priority queues
-// number of ticks each process used the last time it was
-// scheduled in each priority queue
-// cannot be greater than the time-slice for each queue
-// number of ticks each RUNNABLE process waited in the lowest
-// priority queue
+  int ticks[3]; // number of ticks each process used the last time
+                // scheduled in each priority queue
+                // cannot be greater than the time slice for each queue
+
+  uint wait_time; // number of ticks each RUNNABLE process waited in the lowest
+                  // priority queue
 
 
-  int ticks; //number of timer ticks the process has run for
+
+  int num_ticks; //number of timer ticks the process has run for
   int total_ticks; //total number of timer ticks the process has run for
   struct sched_stat_t sched_stats[NSCHEDSTATS]; // schedule stats for each tick
   int num_stats_used; // count to the end of the array
