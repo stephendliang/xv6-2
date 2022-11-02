@@ -121,9 +121,6 @@ int             wait(void);
 void            wakeup(void*);
 void            yield(void);
 
-void
-sleep1(void *, struct spinlock *);
-
 // swtch.S
 void            swtch(struct context**, struct context*);
 

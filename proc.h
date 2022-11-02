@@ -13,6 +13,17 @@ struct cpu {
 extern struct cpu cpus[NCPU];
 extern int ncpu;
 
+
+extern int c0;
+extern int c1;
+extern int c2;
+
+extern struct proc* q0[NPROC];
+extern struct proc* q1[NPROC];
+extern struct proc* q2[NPROC];
+
+
+
 //PAGEBREAK: 17
 // Saved registers for kernel context switches.
 // Don't need to save all the segment registers (%cs, etc),
@@ -49,6 +60,24 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+
+ int times[3]
+ int ticks[3]
+ uint wait_time;
+// number of times each process was scheduled at each of 3
+// priority queues
+// number of ticks each process used the last time it was
+// scheduled in each priority queue
+// cannot be greater than the time-slice for each queue
+// number of ticks each RUNNABLE process waited in the lowest
+// priority queue
+
+
+  int ticks; //number of timer ticks the process has run for
+  int total_ticks; //total number of timer ticks the process has run for
+  struct sched_stat_t sched_stats[NSCHEDSTATS]; // schedule stats for each tick
+  int num_stats_used; // count to the end of the array
 };
 
 // Process memory is laid out contiguously, low addresses first:
