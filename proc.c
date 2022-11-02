@@ -453,7 +453,7 @@ scheduler(void)
         p->num_ticks++;
 
         int start = ticks;
-        swtch(&cpu->scheduler, proc->context);
+        swtch(&(c->scheduler), p->context);
         switchkvm();
         int duration = ticks - start;
         p->num_stats_used++;
@@ -493,7 +493,7 @@ scheduler(void)
         p->num_ticks++;
 
         int start = ticks;
-        swtch(&cpu->scheduler, proc->context);
+        swtch(&(c->scheduler), p->context);
         switchkvm();
         int duration = ticks - start;
         p->num_stats_used++;
@@ -534,7 +534,7 @@ scheduler(void)
         p->num_ticks++;
 
         int start = ticks;
-        swtch(&cpu->scheduler, proc->context);
+        swtch(&(c->scheduler), p->context);
         switchkvm();
         int duration = ticks - start;
         p->num_stats_used++;
@@ -542,9 +542,9 @@ scheduler(void)
         p->ticks[2] = duration;
         p->total_ticks += duration;
 
-        p->sched_stats[tick].start_tick = start; //the number of ticks when this process is scheduled
-        p->sched_stats[tick].duration = duration; //number of ticks the process is running before it gives up the CPU
-        p->sched_stats[tick].priority = 2; //the priority of the process when it's scheduled
+        p->sched_stats[ticks].start_tick = start; //the number of ticks when this process is scheduled
+        p->sched_stats[ticks].duration = duration; //number of ticks the process is running before it gives up the CPU
+        p->sched_stats[ticks].priority = 2; //the priority of the process when it's scheduled
 
 
         boost();
