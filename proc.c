@@ -393,11 +393,11 @@ wait(void)
 
 void boost()
 {
-  proc* p;
+  proc* p = 0;
 
   if (c2 > 0) {
     for (int i = 0; i < c2; ++i) {
-      if (q2[i].wait_time >= 50) {
+      if (q2[i]->wait_time >= 50) {
         --c2;
         int j = i;
         p = q2[c2];
