@@ -1,7 +1,6 @@
 #include "types.h"
 #include "stat.h"
 #include "user.h"
-#include "condvar.h"
 #include "fcntl.h"
 
 int main() {
