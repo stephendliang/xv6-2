@@ -393,7 +393,7 @@ wait(void)
 
 void boost()
 {
-  proc* p = 0;
+  struct proc* p = 0;
 
   if (c2 > 0) {
     for (int i = 0; i < c2; ++i) {
@@ -401,7 +401,7 @@ void boost()
         --c2;
         int j = i;
         p = q2[c2];
-        p->priority = 0;
+        p->sched_stats[ticks].priority = 0;
         q0[c0] = p;
         copyover(q2, j, c2);
         ++c0;
