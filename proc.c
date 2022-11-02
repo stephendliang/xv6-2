@@ -466,8 +466,8 @@ scheduler(void)
         p->sched_stats[ticks].priority = 0; //the priority of the process when it's scheduled
 
 
-        if (p->ticks >= 1) {
-          p->ticks = 0;
+        if (p->num_ticks >= 1) {
+          p->num_ticks = 0;
           //copy proc to lower priority queue;
           q1[c1] = p;
           q0[i] = 0;
@@ -506,8 +506,8 @@ scheduler(void)
         p->sched_stats[ticks].priority = 1; //the priority of the process when it's scheduled
 
 
-        if (p->ticks >= 2) {
-          p->ticks = 0;
+        if (p->num_ticks >= 2) {
+          p->num_ticks = 0;
           //copy proc to lower priority queue;
           q2[c2] = p;
           q1[i] = 0;
@@ -524,7 +524,7 @@ scheduler(void)
 
 
     if (c2!=-1) {
-      for (int i=0;i <= c1;++i) {
+      for (int i=0;i <= c2;++i) {
         if (q1[i]->state != RUNNABLE) continue;
 
         p = q1[i];
@@ -538,8 +538,8 @@ scheduler(void)
         switchkvm();
         int duration = ticks - start;
         p->num_stats_used++;
-        p->times[1]++;
-        p->ticks[1] = duration;
+        p->times[2]++;
+        p->ticks[2] = duration;
         p->total_ticks += duration;
 
         p->sched_stats[tick].start_tick = start; //the number of ticks when this process is scheduled
@@ -548,11 +548,11 @@ scheduler(void)
 
 
         boost();
-        if (p->ticks >= 8) {
-          p->ticks = 0;
+        if (p->num_ticks >= 8) {
+          p->num_ticks = 0;
           //move process to end of its own queue Shift left
           int j = i;
-          copyover(q1, i, lim)
+          copyover(q2, j, c2)
 
           q2[c2] = p;
         }
@@ -782,15 +782,15 @@ getpinfo(int pid)
       continue;
 
     if (p->pid == pid) {
-      printf("name = %s, pid = %d\n", proc->name, proc->pid);
-      printf("wait_time = %d\n", proc->wait_time);
-      printf("ticks = {%d, %d, %d}\n", proc->ticks[0], proc->ticks[1], proc->ticks[2]);
-      printf("times = {%d, %d, %d}\n", proc->times[0], proc->times[1], proc->times[2]);
+      cprintf("name = %s, pid = %d\n", proc->name, proc->pid);
+      cprintf("wait_time = %d\n", proc->wait_time);
+      cprintf("ticks = {%d, %d, %d}\n", proc->ticks[0], proc->ticks[1], proc->ticks[2]);
+      cprintf("times = {%d, %d, %d}\n", proc->times[0], proc->times[1], proc->times[2]);
 
       // for each stat
       //For each stat until num_of_stats
       for (int i = 0; i < NSCHEDSTATS; ++i)
-        printf("start=%d, duration=%d, priority=%d\n",
+        cprintf("start=%d, duration=%d, priority=%d\n",
         sched_stat[i].start_tick, sched_stats[i].duration, sched_stats[i].priority);// from each valid item in sched_stats
     }
   }
