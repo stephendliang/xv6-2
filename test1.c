@@ -10,7 +10,7 @@ int main() {
 	if (pid > 0) {
  	    // Do I/O instensive job
 	 	for (int I = 0; I < 100; ++I)
-	 		printf("abcde %i,\n", I);
+	 		printf(1, "abcde %i,\n", I);
 		wait();
 	    getpinfo(getpid());
 	} else {
@@ -26,7 +26,7 @@ int main() {
 			j += (I % 197) * 7 / 29;
 		j %= ((1 << 16) + 1);
 	 	
-	 	printf("%i,\n", j);
+	 	printf(1, "%i,\n", j);
 	}
 
     exit();
