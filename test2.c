@@ -24,19 +24,22 @@ void io_intense()
 }
 
 int main() {
-  for (int i = 0; i < 10; ++i) {
     //In parent
     if (fork() > 0) {
-      //Fork multiple times — Like 10 times
-      //Do CPU or I/O intensive job
-      compute_intense();
+      for (int i = 0; i < 3; ++i) {
+        fork();
+
+      }
+      for (int i = 0; i<10000000;++i)printf(2,"");
+      for (int i = 0; i < 4;++i)wait();
+
       getpinfo(getpid());
+      exit();
     } else {
       //Do CPU or I/O intensive job in each task
-      io_intense();
+      for (int i = 0; i<10000000;++i)printf(2,"");
       getpinfo(getpid());
-    }
+    exit();
   }
 
-    exit();
 }

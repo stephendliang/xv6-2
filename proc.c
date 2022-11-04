@@ -7,7 +7,7 @@
 #include "proc.h"
 #include "spinlock.h"
 
-#define copyover(arr, i, lim) while (i < lim) {arr[i] = arr[i + 1];++i;}
+#define copyover(arr, i, lim) while (i < (lim-1)) {arr[i] = arr[i + 1];++i;}
 
 struct proc* q0[NPROC];
 struct proc* q1[NPROC];
@@ -155,17 +155,15 @@ found:
   p->total_ticks = 0; //total number of timer ticks the process has run for
   p->num_stats_used = 0; // count to the end of the array
 
-
-  p->sched_stats[ticks].start_tick = 0;
-  p->sched_stats[ticks].duration = 0;
-  p->sched_stats[ticks].priority = 0;
+  memset(p->sched_stats, 0, sizeof(struct sched_stat_t) * NSCHEDSTATS);
+  //p->sched_stats[ticks].start_tick = 0;
+  //p->sched_stats[ticks].duration = 0;
+  //p->sched_stats[ticks].priority = 0;
 
 
   q0[c0] = p;
   ++c0;
 
-  // should i put this here
-  release(&ptable.lock);
 
   // Allocate kernel stack.
   if((p->kstack = kalloc()) == 0){
@@ -188,6 +186,7 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
+  release(&ptable.lock);
   return p;
 }
 
@@ -201,6 +200,9 @@ userinit(void)
 
 
   // reset stats
+  memset(q0, 0, sizeof(struct proc) * NPROC);
+  memset(q1, 0, sizeof(struct proc) * NPROC);
+  memset(q2, 0, sizeof(struct proc) * NPROC);
 
 
   p = allocproc();
@@ -433,24 +435,27 @@ scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
-  
+  int flg = 0;
+
   for(;;){
     // Enable interrupts on this processor.
     sti();
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-
+    flg = 0;
     // everything same above this line
-    if (c0!=-1){
-      for (int i=0;i <= c0;++i) {
+    if (c0!=0){
+      for (int i=0;i < c0;++i) {
         if (q0[i]->state != RUNNABLE) continue;
+        flg = 1;
 
         p = q0[i];
+        //cprintf("scheduler pid: %d\n", p->pid);
         c->proc = p;
         switchuvm(p);
         p->state = RUNNING;
-        p->num_ticks++;
+        //p->num_ticks++;
 
         int start = ticks;
         swtch(&(c->scheduler), p->context);
@@ -482,15 +487,16 @@ scheduler(void)
       }
     }
 
-    if (c1!=-1) {
-      for (int i=0;i <= c1;++i) {
+    if (c1!= 0 && flg == 0) {
+      for (int i=0;i < c1;++i) {
         if (q1[i]->state != RUNNABLE) continue;
 
         p = q1[i];
+        //cprintf("scheduler q1 pid: %d\n", p->pid);
         c->proc = p;
         switchuvm(p);
         p->state = RUNNING;
-        p->num_ticks++;
+        //p->num_ticks++;
 
         int start = ticks;
         swtch(&(c->scheduler), p->context);
@@ -523,15 +529,16 @@ scheduler(void)
     }
 
 
-    if (c2!=-1) {
-      for (int i=0;i <= c2;++i) {
-        if (q1[i]->state != RUNNABLE) continue;
+    if (c2!=0 && flg == 0) {
+      for (int i=0;i < c2;++i) {
+        if (q2[i]->state != RUNNABLE) continue;
 
-        p = q1[i];
+        p = q2[i];
+        //cprintf("scheduler q2 pid: %d\n", p->pid);
         c->proc = p;
         switchuvm(p);
         p->state = RUNNING;
-        p->num_ticks++;
+        //p->num_ticks++;
 
         int start = ticks;
         swtch(&(c->scheduler), p->context);

@@ -8,8 +8,8 @@ int main() {
 	
 	if (pid > 0) {
  	    // Do I/O instensive job
-	 	for (int I = 0; I < 100; ++I)
-	 		printf(1, "abcde %i,\n", I);
+	 	for (int I = 0; I < 10000; ++I)
+	 		printf(1, "i %d", I);
 		wait();
 	    getpinfo(getpid());
 	} else {
@@ -24,8 +24,9 @@ int main() {
 		for (int I = 0; I < 200000; ++I)
 			j += (I % 197) * 7 / 29;
 		j %= ((1 << 16) + 1);
-	 	
-	 	printf(1, "%i,\n", j);
+	 
+	 	printf(1, "%d,\n", j);
+	    getpinfo(getpid());
 	}
 
     exit();
