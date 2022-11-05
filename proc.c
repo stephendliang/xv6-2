@@ -537,7 +537,6 @@ scheduler(void)
         c->proc = p;
         switchuvm(p);
         p->state = RUNNING;
-        //p->num_ticks++;
 
         int start = ticks;
         swtch(&(c->scheduler), p->context);
@@ -789,10 +788,12 @@ getpinfo(int pid)
       continue;
 
     if (p->pid == pid) {
+      cprintf("***********************\n");
       cprintf("name = %s, pid = %d\n", p->name, p->pid);
       cprintf("wait_time = %d\n", p->wait_time);
       cprintf("ticks = {%d, %d, %d}\n", p->ticks[0], p->ticks[1], p->ticks[2]);
       cprintf("times = {%d, %d, %d}\n", p->times[0], p->times[1], p->times[2]);
+      cprintf("***********************\n");
 
       // for each stat
       //For each stat until num_of_stats
