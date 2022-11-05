@@ -107,8 +107,8 @@ trap(struct trapframe *tf)
 
     struct proc* p = myproc();
     p->num_ticks++;
-    int priority = p->sched_stats[p->num_stats_used - 1].priority;
-    int duration = ticks - p->sched_stats[p->num_stats_used - 1].start_tick;
+    int priority = p->sched_stats[p->num_stats_used].priority;
+    int duration = ticks - p->sched_stats[p->num_stats_used].start_tick;
 
     if (priority == 0 && duration >= 1) yield();
     else if (priority == 1 && duration >= 2) yield();
