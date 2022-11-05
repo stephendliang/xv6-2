@@ -9,7 +9,7 @@ int main() {
 	if (pid > 0) {
  	    // Do I/O instensive job
 	 	for (int I = 0; I < 2000; ++I)
-	 		printf(1, "i %d", I);
+	 		printf(1, "\n");
 		wait();
 	    getpinfo(getpid());
 	} else {
