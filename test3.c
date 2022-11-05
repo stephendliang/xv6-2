@@ -11,7 +11,7 @@ int main() {
     for (int I = 0; I < 2000; ++I){
           printf(1, "i %d", I);
           sleep(0);
-        }
+      }
     wait();
       getpinfo(getpid());
   } else {

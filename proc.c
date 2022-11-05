@@ -467,10 +467,8 @@ scheduler(void)
         p->num_stats_used++;
         p->wait_time = 0;
 
-
         if (p->num_ticks >= 1) {
           p->num_ticks = 0;
-          //copy proc to lower priority queue;
           q1[c1] = p;
           q0[i] = 0;
           int j = i;
@@ -489,11 +487,9 @@ scheduler(void)
         if (q1[i]->state != RUNNABLE) continue;
 
         p = q1[i];
-        //cprintf("scheduler q1 pid: %d\n", p->pid);
         c->proc = p;
         switchuvm(p);
         p->state = RUNNING;
-        //p->num_ticks++;
 
         int start = ticks;
         swtch(&(c->scheduler), p->context);
@@ -533,7 +529,6 @@ scheduler(void)
         if (q2[i]->state != RUNNABLE) continue;
 
         p = q2[i];
-        //cprintf("scheduler q2 pid: %d\n", p->pid);
         c->proc = p;
         switchuvm(p);
         p->state = RUNNING;
