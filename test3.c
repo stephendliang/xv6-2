@@ -4,6 +4,7 @@
 #include "fcntl.h"
 
 int main() {
+  /*
   for (int i = 0; i < 10; ++i) {
     //In parent
     if (fork() > 0) {
@@ -16,7 +17,7 @@ int main() {
       io_intense();
       getpinfo(getpid());
     }
-  }
+  }*/
 
     exit();
 }
