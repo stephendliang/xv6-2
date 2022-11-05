@@ -155,10 +155,6 @@ found:
   p->total_ticks = 0; //total number of timer ticks the process has run for
   p->num_stats_used = 0; // count to the end of the array
 
-  memset(p->sched_stats, 0, sizeof(struct sched_stat_t) * NSCHEDSTATS);
-  //p->sched_stats[ticks].start_tick = 0;
-  //p->sched_stats[ticks].duration = 0;
-  //p->sched_stats[ticks].priority = 0;
 
 
   q0[c0] = p;
@@ -393,17 +389,18 @@ wait(void)
   }
 }
 
-void boost()
+void boost(int durations)
 {
   struct proc* p = 0;
 
   if (c2 > 0) {
     for (int i = 0; i < c2; ++i) {
+      q2[i]->wait_time += durations;
       if (q2[i]->wait_time >= 50) {
         --c2;
         int j = i;
         p = q2[c2];
-        p->sched_stats[ticks].priority = 0;
+        //sp->sched_stats[p->num_stats_used].priority = 0;
         q0[c0] = p;
         copyover(q2, j, c2);
         ++c0;
@@ -451,24 +448,24 @@ scheduler(void)
         flg = 1;
 
         p = q0[i];
-        //cprintf("scheduler pid: %d\n", p->pid);
         c->proc = p;
         switchuvm(p);
         p->state = RUNNING;
-        //p->num_ticks++;
 
         int start = ticks;
         swtch(&(c->scheduler), p->context);
         switchkvm();
         int duration = ticks - start;
-        p->num_stats_used++;
         p->times[0]++;
         p->ticks[0] = duration;
         p->total_ticks += duration;
 
-        p->sched_stats[ticks].start_tick = start; //the number of ticks when this process is scheduled
-        p->sched_stats[ticks].duration = duration; //number of ticks the process is running before it gives up the CPU
-        p->sched_stats[ticks].priority = 0; //the priority of the process when it's scheduled
+        p->sched_stats[p->num_stats_used].start_tick = start; //the number of ticks when this process is scheduled
+        p->sched_stats[p->num_stats_used].duration = duration; //number of ticks the process is running before it gives up the CPU
+        p->sched_stats[p->num_stats_used].priority = 0; //the priority of the process when it's scheduled
+
+        p->num_stats_used++;
+        p->wait_time = 0;
 
 
         if (p->num_ticks >= 1) {
@@ -482,7 +479,7 @@ scheduler(void)
           --c0;
         }
 
-        boost();
+        boost(duration);
         c->proc = 0;
       }
     }
@@ -502,14 +499,16 @@ scheduler(void)
         swtch(&(c->scheduler), p->context);
         switchkvm();
         int duration = ticks - start;
-        p->num_stats_used++;
         p->times[1]++;
         p->ticks[1] = duration;
         p->total_ticks += duration;
 
-        p->sched_stats[ticks].start_tick = start; //the number of ticks when this process is scheduled
-        p->sched_stats[ticks].duration = duration; //number of ticks the process is running before it gives up the CPU
-        p->sched_stats[ticks].priority = 1; //the priority of the process when it's scheduled
+
+        p->sched_stats[p->num_stats_used].start_tick = start; //the number of ticks when this process is scheduled
+        p->sched_stats[p->num_stats_used].duration = duration; //number of ticks the process is running before it gives up the CPU
+        p->sched_stats[p->num_stats_used].priority = 1; //the priority of the process when it's scheduled
+        p->num_stats_used++;
+        p->wait_time = 0;
 
 
         if (p->num_ticks >= 2) {
@@ -523,7 +522,7 @@ scheduler(void)
           --c1;
         }
 
-        boost();
+        boost(duration);
         c->proc = 0;
       }
     }
@@ -544,17 +543,18 @@ scheduler(void)
         swtch(&(c->scheduler), p->context);
         switchkvm();
         int duration = ticks - start;
-        p->num_stats_used++;
         p->times[2]++;
         p->ticks[2] = duration;
         p->total_ticks += duration;
 
-        p->sched_stats[ticks].start_tick = start; //the number of ticks when this process is scheduled
-        p->sched_stats[ticks].duration = duration; //number of ticks the process is running before it gives up the CPU
-        p->sched_stats[ticks].priority = 2; //the priority of the process when it's scheduled
+        p->sched_stats[p->num_stats_used].start_tick = start; //the number of ticks when this process is scheduled
+        p->sched_stats[p->num_stats_used].duration = duration; //number of ticks the process is running before it gives up the CPU
+        p->sched_stats[p->num_stats_used].priority = 2; //the priority of the process when it's scheduled
+        p->num_stats_used++;
+        p->wait_time = 0;
 
 
-        boost();
+        boost(duration);
         if (p->num_ticks >= 8) {
           p->num_ticks = 0;
           //move process to end of its own queue Shift left
@@ -796,9 +796,10 @@ getpinfo(int pid)
 
       // for each stat
       //For each stat until num_of_stats
-      for (int i = 0; i < NSCHEDSTATS; ++i)
-        cprintf("start=%d, duration=%d, priority=%d\n",
-        p->sched_stats[i].start_tick, p->sched_stats[i].duration, p->sched_stats[i].priority);// from each valid item in sched_stats
+      for (int i = 0; i < p->num_stats_used; ++i) {
+          cprintf("start=%d, duration=%d, priority=%d\n",
+          p->sched_stats[i].start_tick,p->sched_stats[i].duration,p->sched_stats[i].priority);// from each valid item in sched_stats 
+        }
     }
   }
   

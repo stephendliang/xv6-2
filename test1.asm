@@ -28,21 +28,21 @@ int main() {
   19:	85 c0                	test   %eax,%eax
   1b:	7e 3c                	jle    59 <main+0x59>
  	    // Do I/O instensive job
-	 	for (int I = 0; I < 10000; ++I)
+	 	for (int I = 0; I < 2000; ++I)
   1d:	31 db                	xor    %ebx,%ebx
   1f:	90                   	nop
 	 		printf(1, "i %d", I);
   20:	83 ec 04             	sub    $0x4,%esp
   23:	53                   	push   %ebx
   24:	68 58 08 00 00       	push   $0x858
-	 	for (int I = 0; I < 10000; ++I)
+	 	for (int I = 0; I < 2000; ++I)
   29:	83 c3 01             	add    $0x1,%ebx
 	 		printf(1, "i %d", I);
   2c:	6a 01                	push   $0x1
   2e:	e8 cd 04 00 00       	call   500 <printf>
-	 	for (int I = 0; I < 10000; ++I)
+	 	for (int I = 0; I < 2000; ++I)
   33:	83 c4 10             	add    $0x10,%esp
-  36:	81 fb 10 27 00 00    	cmp    $0x2710,%ebx
+  36:	81 fb d0 07 00 00    	cmp    $0x7d0,%ebx
   3c:	75 e2                	jne    20 <main+0x20>
 		wait();
   3e:	e8 77 03 00 00       	call   3ba <wait>

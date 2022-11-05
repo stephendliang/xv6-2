@@ -16,4 +16,5 @@ struct sched_stat_t
    int priority; //the priority of the process when it's scheduled
    //you may add more fields for debugging purposes
 };
+
 #endif

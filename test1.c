@@ -8,7 +8,7 @@ int main() {
 	
 	if (pid > 0) {
  	    // Do I/O instensive job
-	 	for (int I = 0; I < 10000; ++I)
+	 	for (int I = 0; I < 2000; ++I)
 	 		printf(1, "i %d", I);
 		wait();
 	    getpinfo(getpid());
